@@ -1,0 +1,323 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>
+            RED Spider Results
+        </title>
+        <style type="text/css" media="screen">
+        body {
+            background-color:#b4d5ff;
+            font-family:"Lucida Sans Unicode", "Lucida Grande", sans-serif;
+            font-size:13px;
+        }
+
+        a {
+            color:#3d707a;
+        }
+
+        a:hover,a:active {
+            color:#bf7d18;
+        }
+
+        ul.uri {
+            list-style:square;
+            margin:0;
+            padding:0;
+        }
+
+        body > ul.uri {
+            display:block;
+            background-color:#FFF;
+            border:solid gray 1px;
+            border-collapse:collapse;
+            list-style-position: inside;
+            margin:1em auto;
+            padding:0 1em;
+            width:800px;
+        }
+
+        table {
+            background-color:#FFF;
+            border:solid gray 1px;
+            border-collapse:collapse;
+            margin:1.25em auto 4em;
+            text-align:left;
+            width:800px;
+        }
+
+        tr:hover {
+            background:#f0f0f0;
+        }
+
+        thead {
+            background-color:#ffcc9c;
+            font-size:larger;
+            font-weight:700;
+            line-height:2em;
+            text-align:center;
+            vertical-align:middle;
+        }
+
+        tbody tr {
+            border-bottom:dotted gray 1px;
+        }
+
+        td {
+            padding:1em;
+            vertical-align:top;
+        }
+
+        td:first-child {
+            font-size:105%;
+            font-style:oblique;
+            text-align:center;
+            vertical-align:middle;
+            width:33%;
+        }
+
+        h1,h2,h3,h4,h5,h6 {
+            text-align:center;
+        }
+
+        h1 {
+            margin-top:1em;
+            text-shadow:#999 3px 3px 2px;
+        }
+
+        #bad {
+            color:red;
+            font-weight:bolder;
+        }
+
+        #warning {
+            color:#FF0;
+        }
+
+        .toggle {
+            background-color:#e8e8e8;
+            border:#999 solid 1px;
+            color:#000;
+            font-size:small;
+            margin:4px auto;
+            padding: 3px;
+            text-align:center;
+            white-space:nowrap;
+            width:8em;
+        }
+        </style>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+        <script type="text/javascript" charset="utf-8">
+        jQuery(function($) {
+            $("ul.uri").each(function() {
+                var list = $(this); // Avoid scoping issues with the nested function:
+                var list_size = list.find("li").length;
+
+                if (list_size < 7) return; // No point in altering a small list
+
+                list.css({
+                    overflow: "hidden"
+                    }).slideUp();
+
+                    $('<p class="toggle">Display (' + list_size + ')</p>').insertBefore(list).click(function() {
+                        this._toggle_state = !this._toggle_state;
+                        if (this._toggle_state) {
+                            list.slideDown();
+                        } else {
+                            list.slideUp();
+                        }
+                        $(this).text(this._toggle_state ? "Hide": "Display (" + list_size + ")");
+                    });
+                });
+            });
+        </script>
+    </head>
+    <body>
+<h1 id="warning">Warning</h1>
+<h2 class="Caching">Caching</h2>
+
+                    <table class="warning Caching">
+                        <thead>
+                            <tr>
+                                <th>Message</th>
+                                <th>Pages</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                
+
+                        <tr>
+                            <td>Cache-Control: public is rarely necessary.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li></ul> </td>
+                        </tr>
+                    
+</tbody></table>
+<h2 class="HTML">HTML</h2>
+
+                    <table class="warning HTML">
+                        <thead>
+                            <tr>
+                                <th>Message</th>
+                                <th>Pages</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                
+
+                        <tr>
+                            <td>unescaped &amp; or unknown entity "&amp;sig"</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>unescaped &amp; which should be written as &amp;amp;</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>unescaped &amp; or unknown entity "&amp;ltmpl"</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>unescaped &amp; or unknown entity "&amp;continue"</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>&lt;table&gt; lacks "summary" attribute</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>unescaped &amp; or unknown entity "&amp;ahname"</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>trimming empty &lt;b&gt;</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+</tbody></table>
+<h1 id="good">Good Practice</h1>
+<h2 class="Caching">Caching</h2>
+
+                    <table class="good Caching">
+                        <thead>
+                            <tr>
+                                <th>Message</th>
+                                <th>Pages</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                
+
+                        <tr>
+                            <td>This response is fresh until 2 sec from now.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response is fresh until 1 week from now.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response is fresh until 6 days 22 hr from now.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response is fresh until 1 sec from now.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li></ul> </td>
+                        </tr>
+                    
+</tbody></table>
+<h2 class="General">General</h2>
+
+                    <table class="good General">
+                        <thead>
+                            <tr>
+                                <th>Message</th>
+                                <th>Pages</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                
+
+                        <tr>
+                            <td>The server's clock is correct.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/test">http://example.org/test</a></li><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>The Content-Length header is correct.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li></ul> </td>
+                        </tr>
+                    
+</tbody></table>
+<h1 id="info">Informational</h1>
+<h2 class="Caching">Caching</h2>
+
+                    <table class="info Caching">
+                        <thead>
+                            <tr>
+                                <th>Message</th>
+                                <th>Pages</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                
+
+                        <tr>
+                            <td>This response can be served stale.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response has been cached for 1 hr 6 sec.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response has been cached for 9 min 58 sec.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response cannot be served from cache without validation.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/test">http://example.org/test</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response can be stored by any cache.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/test">http://example.org/test</a></li><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li></ul> </td>
+                        </tr>
+                    
+
+                        <tr>
+                            <td>This response has been cached for 9 min 59 sec.</td>
+                            <td> <ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li></ul> </td>
+                        </tr>
+                    
+</tbody></table>
+<h1>All Pages</h1><ul class="uri"><li><a href="http://example.org/">http://example.org/</a></li><li><a href="http://example.org/location.html">http://example.org/location.html</a></li><li><a href="http://example.org/travel.html">http://example.org/travel.html</a></li><li><a href="http://example.org/test">http://example.org/test</a></li><li><a href="http://example.org/schedule.html">http://example.org/schedule.html</a></li></ul>
+<h1>All Resources</h1><ul class="uri"><li><a href="http://example.org/static/us-main.jpg">http://example.org/static/us-main.jpg</a></li><li><a href="http://example.org/static/main.css">http://example.org/static/main.css</a></li></ul>
+    </body>
+</html>
