@@ -18,6 +18,11 @@ from urlparse import urlparse
 from collections import defaultdict
 from cgi import escape
 
+try:
+    import tidylib
+except ImportError:
+    pass
+
 
 class HTMLAccumulator(object):
     content = u""
@@ -34,15 +39,14 @@ class HTMLAccumulator(object):
             logging.warning("Couldn't decode fragment: %s" % e)
 
     def __str__(self):
-        return str(self.content)
-
-    def __unicode__(self):
         return self.content
 
 
 class SpiderReport(object):
     """Represents information which applies to one or more URIs"""
-    messages = defaultdict(dict)
+    messages  = defaultdict(dict)
+    pages     = None
+    resources = None
 
     # Severity levels, used to simplify sorting:
     SEVERITY_LEVELS = {
@@ -92,7 +96,7 @@ class SpiderReport(object):
         for line in template:
             if "GENERATED_CONTENT" in line:
                 break
-            print >> output, line
+            output.write(line)
 
         for level in reversed(self.SEVERITY_LEVELS.keys()):
             if not level in self.messages: continue
@@ -100,7 +104,8 @@ class SpiderReport(object):
             print >> output, """<h1 id="%s">%s</h1>""" % (level, self.SEVERITY_LEVELS[level])
             categories = self.messages[level]
 
-            for category, summaries in categories.items():
+            for category in sorted(categories.keys()):
+                summaries = categories[category]
                 print >> output, """<h2 class="%s">%s</h2>""" % (category, category)
 
                 print >> output, """
@@ -136,12 +141,13 @@ class SpiderReport(object):
             print >> output, "%s:" % self.SEVERITY_LEVELS[level]
             categories = self.messages[level]
 
-            for category, summaries in categories.items():
+            for category in sorted(categories.keys()):
+                summaries = categories[category]
                 print >> output, "\t%s:" % category
 
                 for summary, data in summaries.items():
-                    print >> output, "\t%s: %d pages" % (summary, len(data['uris']))
-                    print >> output, "\t\t%s" % "\n\t\t".join(sorted(data['uris']))
+                    print >> output, "\t\t%s: %d pages" % (summary, len(data['uris']))
+                    print >> output, "\t\t\t%s" % "\n\t\t\t".join(sorted(data['uris']))
                     print >> output
 
             print >> output
@@ -178,9 +184,7 @@ class REDSpider(object):
                 self.report_red_message(m, uri)
 
             if self.validate_html:
-                (cleaned_html, warnings) = tidylib.tidy_document(html_body.content)
-                for warn_match in self.tidy_re.finditer(warnings):
-                    self.report.add(level=warn_match.group("level"), category="HTML", title=warn_match.group("message"), uri=uri)
+                self.report_tidy_messages(uri, html_body.content)
 
         for uri in self.resources:
             red = ResourceExpertDroid(uri, status_cb=logging.info)
@@ -189,13 +193,18 @@ class REDSpider(object):
                 self.report_red_message(m, uri)
 
             if self.validate_html:
-                (cleaned_html, warnings) = tidylib.tidy_document(html_body)
-                for warn_match in self.tidy_re.finditer(warnings):
-                    self.report.add(level=warn_match.group("level"), category="HTML", title=warn_match.group("message"), uri=uri)
+                self.report_tidy_messages(uri, html_body.content)
 
         # Convenience copies for reporting:
         self.report.pages = self.pages
         self.report.resources = self.resources
+
+    def report_tidy_messages(self, uri, html):
+        (cleaned_html, warnings) = tidylib.tidy_document(html)
+        logging.debug("%s: tidy messages: %s" % (uri, html))
+        for warn_match in self.tidy_re.finditer(warnings):
+            sev = "error" if warn_match.group("level").lower() == "error" else "warning"
+            self.report.add(severity=sev, category="HTML", title=escape(warn_match.group("message")), uri=uri)
 
     def report_red_message(self, msg, uri):
         """Unpacks a message as returned in ResourceExpertDroid.messages"""
@@ -230,12 +239,36 @@ def save_uri_list(fn, data):
     f.write("\n")
     f.close()
 
+def configure_logging(options):
+    # One of our imports must be initializing because logging.basicConfig() does
+    # nothing if called in main(). We'll reset logging and configure it correctly:
+
+    root_logger = logging.getLogger()
+
+    for handler in root_logger.root.handlers:
+        root_logger.removeHandler(handler)
+        handler.close()
+
+    if options.log_file:
+        handler = logging.FileHandler(options.log_file, "a")
+    else:
+        handler = logging.StreamHandler()
+
+    handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+
+    root_logger.addHandler(handler)
+
+    if options.verbosity > 1:
+        root_logger.setLevel(logging.DEBUG)
+    elif options.verbosity:
+        root_logger.setLevel(logging.INFO)
+
 
 def main():
     parser = optparse.OptionParser(__doc__.strip())
 
-    parser.add_option("--format", dest="report_format", default="text",     help='Generate the report as HTML or text')
-    parser.add_option("--report", dest="report_file",   default=sys.stdout, help='Save report to a file instead of stdout')
+    parser.add_option("--format", dest="report_format", default="text", help='Generate the report as HTML or text')
+    parser.add_option("--report", dest="report_file", default=sys.stdout, help='Save report to a file instead of stdout')
     parser.add_option("--validate-html", action="store_true", default=False, help="Validate HTML using tidylib")
     parser.add_option("--save-page-list", dest="page_list", help='Save a list of URLs for HTML pages in the specified file')
     parser.add_option("--save-resource-list", dest="resource_list", help='Save a list of URLs for pages resources in the specified file')
@@ -245,32 +278,14 @@ def main():
 
     (options, uris) = parser.parse_args()
 
-    log_config = {
-        "level": logging.WARN,
-        "format": '%(levelname)s: %(message)s'
-    }
-
-    if options.log_file:
-        log_config['filename'] = options.log_file
+    configure_logging(options)
 
     if not isinstance(options.report_file, file):
         options.report_file = file(options.report_file, "w")
 
-    if options.verbosity > 1:
-        log_config['level'] = logging.DEBUG
-    elif options.verbosity:
-        log_config['level'] = logging.INFO
-
-    logging.basicConfig(**log_config)
-    logging.getLogger().setLevel(log_config['level'])
-
-    if options.validate_html:
-        try:
-            import tidylib
-            sys.modules['tidylib'] = tidylib
-        except ImportError:
-            logging.warning("Couldn't import tidylib - HTML validation is disabled. Try installing from PyPI or http://countergram.com/software/pytidylib")
-            options.validate_html = False
+    if options.validate_html and not "tidylib" in sys.modules:
+        logging.warning("Couldn't import tidylib - HTML validation is disabled. Try installing from PyPI or http://countergram.com/software/pytidylib")
+        options.validate_html = False
 
     rs = REDSpider(uris, validate_html=options.validate_html)
 
