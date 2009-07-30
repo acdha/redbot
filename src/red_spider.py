@@ -192,9 +192,6 @@ class REDSpider(object):
             for m in red.messages:
                 self.report_red_message(m, uri)
 
-            if self.validate_html:
-                self.report_tidy_messages(uri, html_body.content)
-
         # Convenience copies for reporting:
         self.report.pages = self.pages
         self.report.resources = self.resources
