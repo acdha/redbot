@@ -125,7 +125,7 @@ class SpiderReport(object):
                             <td>%s</td>
                             <td> <ul class="uri"><li>%s</li></ul> </td>
                         </tr>
-                    """ % (summary, "</li><li>".join(map(make_link, sorted(data['uris']))))
+                    """ % (escape(summary), "</li><li>".join(map(make_link, sorted(data['uris']))))
 
                 print >> output, """</tbody></table>"""
 
@@ -201,7 +201,7 @@ class REDSpider(object):
         logging.debug("%s: tidy messages: %s" % (uri, html))
         for warn_match in self.tidy_re.finditer(warnings):
             sev = "error" if warn_match.group("level").lower() == "error" else "warning"
-            self.report.add(severity=sev, category="HTML", title=escape(warn_match.group("message")), uri=uri)
+            self.report.add(severity=sev, category="HTML", title=warn_match.group("message"), uri=uri)
 
     def report_red_message(self, msg, uri):
         """Unpacks a message as returned in ResourceExpertDroid.messages"""
