@@ -129,8 +129,8 @@ class SpiderReport(object):
 
                 print >> output, """</tbody></table>"""
 
-        print >> output, """<h1>All Pages</h1><ul class="uri"><li>%s</li></ul>""" % "</li><li>".join(map(make_link, self.pages))
-        print >> output, """<h1>All Resources</h1><ul class="uri"><li>%s</li></ul>""" % "</li><li>".join(map(make_link, self.resources))
+        print >> output, """<h1>All Pages</h1><ul class="uri"><li>%s</li></ul>""" % "</li><li>".join(map(make_link, sorted(self.pages)))
+        print >> output, """<h1>All Resources</h1><ul class="uri"><li>%s</li></ul>""" % "</li><li>".join(map(make_link, sorted(self.resources)))
 
         output.writelines(template)
 
@@ -184,6 +184,7 @@ class REDSpider(object):
                 self.report_red_message(m, uri)
 
             if self.validate_html:
+                # FIXME: Don't validate error pages - or validate but note that the page tested was not the intended one?
                 self.report_tidy_messages(uri, html_body.content)
 
         for uri in self.resources:
