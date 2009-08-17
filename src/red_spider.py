@@ -183,8 +183,10 @@ class REDSpider(object):
             for m in red.messages:
                 self.report_red_message(m, uri)
 
-            if self.validate_html:
-                # FIXME: Don't validate error pages - or validate but note that the page tested was not the intended one?
+            # Avoid HTML validation for pages which didn't load correctly. RED normally
+            # reports an error in this case so we'll leave the general server
+            # failure message in the report but avoid further reporting
+            if red.res_complete and self.validate_html:
                 self.report_tidy_messages(uri, html_body.content)
 
         for uri in self.resources:
