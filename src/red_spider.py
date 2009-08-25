@@ -101,7 +101,6 @@ class SpiderReport(object):
             output.write(line)
 
         for level in self.REPORT_ORDER:
-            print level
             if not level in self.messages: continue
 
             print >> output, """<h1 id="%s">%s</h1>""" % (level, self.SEVERITY_LEVELS[level])
