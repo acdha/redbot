@@ -57,6 +57,9 @@ class SpiderReport(object):
         "error":    "Error",
     }
 
+    # Used to avoid problems with dict.keys() not being stable:
+    REPORT_ORDER = ('error', 'warning', 'bad', 'good', 'info')
+
     def __init__(self, severity=None, title="", details=""):
         self.severity = severity
         self.title    = title
@@ -82,7 +85,6 @@ class SpiderReport(object):
             self.generate_text(output)
 
     def generate_html(self, output):
-
         def make_link(url):
             url = escape(url)
             # TODO: Save page titles for pretty links?
@@ -98,7 +100,8 @@ class SpiderReport(object):
                 break
             output.write(line)
 
-        for level in reversed(self.SEVERITY_LEVELS.keys()):
+        for level in self.REPORT_ORDER:
+            print level
             if not level in self.messages: continue
 
             print >> output, """<h1 id="%s">%s</h1>""" % (level, self.SEVERITY_LEVELS[level])
@@ -135,7 +138,7 @@ class SpiderReport(object):
         output.writelines(template)
 
     def generate_text(self, output):
-        for level in reversed(self.SEVERITY_LEVELS.keys()):
+        for level in self.REPORT_ORDER:
             if not level in self.messages: continue
 
             print >> output, "%s:" % self.SEVERITY_LEVELS[level]
