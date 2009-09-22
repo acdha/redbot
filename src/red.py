@@ -112,11 +112,27 @@ class ResourceExpertDroid(RedFetcher):
     def checkCaching(self):
         "Examine HTTP caching characteristics."
         # TODO: check URI for query string, message about HTTP/1.0 if so
-        # TODO: assure that there aren't any dup standard directives
-        # TODO: check for spurious 'public' directive (e.g., sun.com)
-        # TODO: check for capitalisation on standard directives
-        cc_dict = dict(self.parsed_hdrs.get('cache-control', []))
+        # known Cache-Control directives that don't allow duplicates
+        known_cc = ["max-age", "no-store", "s-maxage", "public", "private"
+            "pre-check", "post-check", "stale-while-revalidate", "stale-if-error",
+        ]
+
+        cc_set = self.parsed_hdrs.get('cache-control', [])
+        cc_list = [k for (k,v) in cc_set]
+        cc_dict = dict(cc_set)
         cc_keys = cc_dict.keys()
+
+        # check for mis-capitalised directives /
+        # assure there aren't any dup directives
+        for cc in cc_keys:
+            if cc.lower() in known_cc and cc != cc.lower():
+                self.setMessage('header-cache-control', rs.CC_MISCAP,
+                    cc_lower = cc.lower(), cc=cc
+                )
+            if cc in known_cc and cc_list.count(cc) > 1:
+                self.setmessage('header-cache-control', rs.CC_DUP,
+                    cc=cc
+                )
 
         # Who can store this?
         if self.method not in cacheable_methods:
@@ -142,8 +158,12 @@ class ResourceExpertDroid(RedFetcher):
 
         # no-cache?
         if 'no-cache' in cc_keys:
-            self.setMessage('header-cache-control', rs.NO_CACHE)
-            return # TODO: differentiate when there aren't LM or ETag present.
+            if "last-modified" not in self.parsed_hdrs.keys() and \
+               "etag" not in self.parsed_hdrs.keys():
+                self.setMessage('header-cache-control', rs.NO_CACHE_NO_VALIDATOR)
+            else:
+                self.setMessage('header-cache-control', rs.NO_CACHE)
+            return
 
         # pre-check / post-check
         if 'pre-check' in cc_keys or 'post-check' in cc_keys:

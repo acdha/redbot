@@ -65,7 +65,7 @@ class RedFetcher:
       (
        subject,     # The subject(s) of the msg, as a space-separated string.
                     # e.g., "header-cache-control header-expires"
-       message,     # The message structure; see red.speak.py
+       message,     # The message structure; see red_speak.py
        subrequest,  # Optionally, a RedFetcher object representing a
                     # request with additional details about another request
                     # made in order to generate the message
@@ -116,10 +116,10 @@ class RedFetcher:
         self._gzip_ok = True # turn False if we have a problem
         self._makeRequest()
 
-    def setMessage(self, subject, msg, subreq=None, **vrs):
+    def setMessage(self, subject, msg, subreq=None, **vars):
         "Set a message."
-        vrs['response'] = rs.response.get(self.type, rs.response['this'])['en']
-        self.messages.append((subject, msg, subreq, vrs))
+        vars['response'] = rs.response.get(self.type, rs.response['this'])['en']
+        self.messages.append(msg(subject, subreq, vars))
 
     def done(self):
         "Callback for when the response is complete and analysed."
@@ -139,7 +139,7 @@ class RedFetcher:
         if self.status_cb and self.type:
             self.status_cb("fetching %s (%s)" % (self.uri, self.type))
         req_body, req_done = self._client.req_start(
-                                    self.method, self.uri, self.req_hdrs, nbhttp.dummy)
+            self.method, self.uri.encode('utf-8', 'replace'), self.req_hdrs, nbhttp.dummy)
         if self.req_body != None:
             req_body(self.req_body)
         req_done(None)

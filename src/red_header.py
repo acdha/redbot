@@ -27,6 +27,9 @@ $(document).ready(function(){
 			clearTimeout(tid);
 			tid = false;
 		};
+                $(".mesg_sidebar").css({"position": "fixed"});
+		$("#long_mesg").html($("li.msg." + marker_class + ".detail > .hidden_desc").html());
+
 	}, function(){
 		var classes = this.className.split(" ");
 		for (var i=0; i < classes.length; i++) {
@@ -40,6 +43,28 @@ $(document).ready(function(){
 			$("li.msg").fadeTo(50, 1.0);
 		}, 100);
 	});
+
+/* commented out because of issues with bullets disappearing
+        $("span.hdr").click(
+            function(){
+                var classes = this.className.split(" ");
+                for (var i=0; i < classes.length; i++) {
+                    var c = classes[i];
+                    if (c != 'hdr') {
+                        var marker_class = c;
+                    }
+		};
+                $("li.msg." + marker_class).slideDown("fast");
+                $("li.msg:not('." + marker_class + "')").slideUp("fast");
+            }
+        );
+
+        $("span.hdr").dblclick(
+            function(){
+                $("li.msg").slideDown("fast");
+            }
+        );
+*/
 
 	$("tr.droid").hoverIntent(
 	function(){

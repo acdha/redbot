@@ -3,6 +3,7 @@
 """
 A Web UI for RED, the Resource Expert Droid.
 """
+import types
 
 __author__ = "Mark Nottingham <mnot@mnot.net>"
 __copyright__ = """\
@@ -39,7 +40,7 @@ logdir = 'exceptions'
 req_hdrs = []
 
 # how many seconds to allow it to run for
-max_runtime = 30
+max_runtime = 60
 
 # file containing news to display on front page
 news_file = "news.html"
@@ -48,6 +49,7 @@ news_file = "news.html"
 
 import cgi
 import operator
+import os
 import pprint
 import sys
 import textwrap
@@ -85,13 +87,19 @@ class RedWebUi(object):
         self.descend_links = descend
         self.start = time.time()
         timeout = nbhttp.schedule(max_runtime, self.timeoutError)
-        print red_header.__doc__ % {
-                        'js_uri': uri.replace('"', r'\"'),
-                        'html_uri': e(uri),
-                        }
+        header = red_header.__doc__ % {
+            'html_uri': e(uri),
+            'js_uri': uri.replace('"', r'\"'),
+        }
+        print header.encode('utf-8', 'replace')
         self.links = {}          # {type: set(link...)}
         self.link_count = 0
         self.link_droids = []    # list of REDs
+        self.base_uri = "http://%s%s%s" % ( # FIXME: only supports HTTP
+          os.environ.get('HTTP_HOST'),
+          os.environ.get('SCRIPT_NAME'),
+          os.environ.get('PATH_INFO', '')
+        )
         if uri:
             link_parser = link_parse.HTMLLinkParser(uri, self.processLink)
             self.red = red.ResourceExpertDroid(
@@ -155,7 +163,7 @@ class RedWebUi(object):
 
     def presentFooter(self):
         elapsed = time.time() - self.start
-        return u"""\
+        return """\
 <div class="footer">
 <p class="version">this is RED %(version)s.</p>
 <p class="navigation">
@@ -163,7 +171,7 @@ class RedWebUi(object):
 <a href="http://blog.REDbot.org/">blog</a> |
 <a href="http://REDbot.org/project">project</a> |
 <a href="http://REDbot.org/terms/">terms of use</a> |
-<a href="javascript:location%%20=%%20'http://redbot.org/?uri='+escape(location);%%20void%%200"
+<a href="javascript:location%%20=%%20'%(baseuri)s?uri='+escape(location);%%20void%%200"
 title="drag me to your toolbar to use RED any time.">RED</a> bookmarklet
 </p>
 </div>
@@ -172,6 +180,7 @@ title="drag me to your toolbar to use RED any time.">RED</a> bookmarklet
 That took %(requests)s requests and %(elapsed)2.2f seconds.
 -->
 """ % {
+       'baseuri': self.base_uri,
        'version': red.__version__,
        'requests': red_fetcher.total_requests,
        'elapsed': elapsed
@@ -180,14 +189,14 @@ That took %(requests)s requests and %(elapsed)2.2f seconds.
     @staticmethod
     def updateStatus(message):
         "Update the status bar of the browser"
-        print u"""
+        msg = u"""
 <script language="JavaScript">
 <!--
 window.status="%s";
 -->
 </script>
-        """ % \
-            e(message.encode('utf-8', 'replace'))
+        """ % e(message)
+        print msg.encode('utf-8', 'replace')
         sys.stdout.flush()
 
     def timeoutError(self):
@@ -217,7 +226,7 @@ class DetailPresenter(object):
     """
     # the order of message categories to display
     msg_categories = [
-        rs.GENERAL, rs.CONNECTION, rs.CONNEG, rs.CACHING, rs.VALIDATION, rs.RANGE
+        rs.c.GENERAL, rs.c.CONNECTION, rs.c.CONNEG, rs.c.CACHING, rs.c.VALIDATION, rs.c.RANGE
     ]
 
     # Media types that browsers can view natively
@@ -301,23 +310,25 @@ class DetailPresenter(object):
             e(token_name), e(name), self.header_presenter.Show(name, value))
 
     def presentCategory(self, category):
-        "For a given category, return all of the messages in it as an HTML list"
-        messages = [msg for msg in self.red.messages if msg[1][0] == category]
+        "For a given category, return all of the non-detail messages in it as an HTML list"
+        messages = [msg for msg in self.red.messages if msg.category == category]
         if not messages:
             return nl
-        out = [u"<h3>%s</h3>\n<ul>\n" % category]
-        for (s, (c, l, m, lm), sr, v) in messages:
+        out = []
+        if [msg for msg in messages if msg.level != rs.l.DETAIL]:
+            out.append(u"<h3>%s</h3>\n<ul>\n" % category)
+        for m in messages:
             out.append(u"<li class='%s %s msg'>%s<span class='hidden_desc'>%s</span>" %
-                    (l, e(s), e(m[lang]%v), lm[lang]%v)
+                    (m.level, e(m.subject), e(m.summary[lang] % m.vars), m.text[lang] % m.vars)
             )
             out.append(u"</li>")
-            smsgs = [msg for msg in getattr(sr, "messages", []) if msg[1][1] in [rs.BAD]]
+            smsgs = [msg for msg in getattr(m.subrequest, "messages", []) if msg.level in [rs.l.BAD]]
             if smsgs:
                 out.append(u"<ul>")
-                for (s, (c, l, m, lm), sms, v) in smsgs:
+                for sm in smsgs:
                     out.append(
                         u"<li class='%s %s msg'>%s<span class='hidden_desc'>%s</span></li>" %
-                        (l, e(s), e(m[lang]%v), lm[lang]%v)
+                        (sm.level, e(sm.subject), e(sm.summary[lang] % sm.vars), sm.text[lang] % sm.vars)
                     )
                 out.append(u"</ul>")
         out.append(u"</ul>\n")
@@ -405,7 +416,9 @@ class HeaderPresenter(object):
     @staticmethod
     def I(value, sub_width):
         "wrap a line to fit in the header box"
-        tr = textwrap.TextWrapper(width=65-sub_width, subsequent_indent=" "*8)
+        hdr_sz = 65
+        sw = 65 - min(hdr_sz-1, sub_width)
+        tr = textwrap.TextWrapper(width=sw, subsequent_indent=" "*8, break_long_words=True)
         return tr.fill(value)
 
 
@@ -496,8 +509,7 @@ class TablePresenter(object):
             else:
                 out.append(self.presentYesNo(red.gzip_support))
             out.append(self.presentYesNo(red.partial_support))
-            problems = [(m[0], m[1], None, m[3]) for m in red.messages \
-                        if m[1][1] in [rs.WARN, rs.BAD]]
+            problems = [m for m in red.messages if m.level in [rs.l.WARN, rs.l.BAD]]
     # TODO:        problems += sum([m[2].messages for m in red.messages if m[2] != None], [])
             out.append(u"<td>")
             pr_enum = []
@@ -509,8 +521,8 @@ class TablePresenter(object):
             out[0] = out[0] % u" ".join(["%d" % p for p in pr_enum])
             # append the actual problem numbers to the final <td>
             for p in pr_enum:
-                (s, (c, l, m, lm), sr, v) = self.problems[p]
-                out.append("<span class='prob_num'> %s <span class='prob_title'>%s</span></span>" % (p + 1, e(m[lang]%v)))
+                m = self.problems[p]
+                out.append("<span class='prob_num'> %s <span class='prob_title'>%s</span></span>" % (p + 1, e(m.summary[lang] % m.vars)))
         else:
             out.append('<td colspan="11">%s' % red.res_error['desc'])
         out.append(u"</td>")
@@ -553,9 +565,9 @@ class TablePresenter(object):
 
     def presentProblems(self):
         out = ['<br /><h2>Problems</h2><ol>']
-        for (s, (c, l, m, lm), sr, v) in self.problems:
+        for m in self.problems:
             out.append(u"<li class='%s %s msg'>%s<span class='hidden_desc'>%s</span>" %
-                    (l, e(s), e(m[lang]%v), lm[lang]%v)
+                    (m.level, e(m.subject), e(m.summary[lang] % m.vars), m.text[lang] % m.vars)
             )
             out.append(u"</li>")
         out.append(u"</ol>\n")
@@ -614,7 +626,7 @@ if __name__ == "__main__":
     except IndexError:
         sys.excepthook = except_handler
         form = cgi.FieldStorage()
-        test_uri = form.getfirst("uri", "")
+        test_uri = form.getfirst("uri", "").decode('utf-8', 'replace')
         descend = form.getfirst('descend', False)
     print "Content-Type: text/html; charset=utf-8"
     if test_uri:
