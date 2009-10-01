@@ -78,6 +78,8 @@ class SpiderReport(object):
 
         tgt['uris'].add(uri)
 
+        logging.debug("Added %s %s message for %s: %s", category, severity, uri, title)
+
     def save(self, format="html", output=sys.stdout):
         if format == "html":
             self.generate_html(output)
@@ -156,15 +158,19 @@ class SpiderReport(object):
 
 
 class REDSpider(object):
-    pages     = set()
-    resources = set()
-    tidy_re   = re.compile("line (?P<line>\d+) column (?P<column>\d+) - (?P<level>\w+): (?P<message>.*)$", re.MULTILINE)
+    pages        = set()
+    resources    = set()
+    tidy_re      = re.compile("line (?P<line>\d+) column (?P<column>\d+) - (?P<level>\w+): (?P<message>.*)$", re.MULTILINE)
+    skip_link_re = re.compile("^$") # URLs which match won't be spidered
 
-    def __init__(self, uris, language="en", validate_html=False):
-        self.language = language
-        self.allowed_hosts = [ urlparse(u)[1] for u in uris ]
-        self.uris = uris
-        self.validate_html = validate_html
+    def __init__(self, uris, language="en", validate_html=False, skip_media=False, skip_resources=False):
+        self.allowed_hosts  = [ urlparse(u)[1] for u in uris ]
+        self.language       = language
+        self.skip_media     = skip_media
+        self.skip_resources = skip_resources
+        self.uris           = uris
+        self.validate_html  = validate_html
+
         self.report = SpiderReport()
 
     def run(self):
@@ -178,7 +184,7 @@ class REDSpider(object):
                 html_body = HTMLAccumulator()
                 body_procs.append(html_body.feed)
 
-            logging.info("Processing page: %s" % uri)
+            logging.debug("Processing page: %s", uri)
 
             red = ResourceExpertDroid(uri, status_cb=logging.debug, body_procs=body_procs)
 
@@ -190,6 +196,16 @@ class REDSpider(object):
             # failure message in the report but avoid further reporting
             if red.res_complete and self.validate_html:
                 self.report_tidy_messages(uri, html_body.content)
+
+            errs = not red.res_complete or any([ m for m in red.messages if m.level in ['error', 'bad']])
+
+            if errs:
+                logging.warn("Found problems in: %s", uri)
+            else:
+                logging.info("Processed page: %s", uri)
+
+
+        assert len(self.uris) <= len(self.pages)
 
         for uri in self.resources:
             red = ResourceExpertDroid(uri, status_cb=logging.info)
@@ -210,13 +226,11 @@ class REDSpider(object):
 
     def report_red_message(self, msg, uri):
         """Unpacks a message as returned in ResourceExpertDroid.messages"""
-        header, message, subreqest, subst_vars = msg
-        category, level, title, details = message
 
-        title   = self.get_loc(title) % subst_vars
-        details = self.get_loc(details) % subst_vars
+        title   = self.get_loc(msg.summary) % msg.vars
+        details = self.get_loc(msg.text) % msg.vars
 
-        self.report.add(uri=uri, category=category, severity=level, title=title, details=details)
+        self.report.add(uri=uri, category=msg.category, severity=msg.level, title=title, details=details)
 
     def get_loc(self, red_dict):
         """Return the preferred language version of a message returned by RED"""
@@ -224,15 +238,27 @@ class REDSpider(object):
 
     def process_link(self, link, tag, title):
         if urlparse(link)[1] not in self.allowed_hosts:
-            logging.debug("Skipping external resource: %s" % link)
+            logging.debug("Skipping external resource: %s", link)
             return
+
+        if self.skip_link_re.match(link):
+            logging.debug("Link matched skip_link_re - skipping %s", link)
+            return
+
+        if tag.lower() != tag:
+            logging.warn("Mismatch tag case: %s %s", tag, link)
+            sys.exit(1)
 
         if tag in ['a', 'frame', 'iframe']:
             if not link in self.pages:
                 self.uris.append(link)
                 self.pages.add(link)
         else:
-            self.resources.add(link)
+            if tag in ['script', 'link'] and self.skip_resources:
+                return
+
+            if not self.skip_media:
+                self.resources.add(link)
 
 
 def save_uri_list(fn, data):
@@ -272,6 +298,9 @@ def main():
     parser.add_option("--format", dest="report_format", default="text", help='Generate the report as HTML or text')
     parser.add_option("--report", dest="report_file", default=sys.stdout, help='Save report to a file instead of stdout')
     parser.add_option("--validate-html", action="store_true", default=False, help="Validate HTML using tidylib")
+    parser.add_option("--skip-media", action="store_true", default=False, help="Skip media files: <img>, <object>, etc.")
+    parser.add_option("--skip-resources", action="store_true", default=False, help="Skip resources: <script>, <link>")
+    parser.add_option("--skip-link-re", type="string", help="Skip links whose URL matches the specified regular expression")
     parser.add_option("--save-page-list", dest="page_list", help='Save a list of URLs for HTML pages in the specified file')
     parser.add_option("--save-resource-list", dest="resource_list", help='Save a list of URLs for pages resources in the specified file')
     parser.add_option("--language", default="en", help="Report using a different language than '%default'")
@@ -289,7 +318,21 @@ def main():
         logging.warning("Couldn't import tidylib - HTML validation is disabled. Try installing from PyPI or http://countergram.com/software/pytidylib")
         options.validate_html = False
 
-    rs = REDSpider(uris, validate_html=options.validate_html)
+
+    rs = REDSpider(uris,
+        validate_html=options.validate_html,
+        skip_media=options.skip_media,
+        skip_resources=options.skip_resources,
+    )
+
+    if options.skip_link_re:
+        i = options.skip_link_re
+
+        if not i[0] == "^":
+            i = r"^.*%s" % i
+            logging.warn("Corrected unanchored skip_link_re to: %s", i)
+
+        rs.skip_link_re = re.compile(i, re.IGNORECASE)
 
     rs.run()
 
