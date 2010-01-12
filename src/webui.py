@@ -179,8 +179,11 @@ class RedWebUi(object):
 
     def presentBody(self):
         """show the stored body sample"""
-        uni_sample = unicode(self.body_sample,
-            self.link_parser.doc_enc or self.link_parser.http_enc, 'ignore')
+        try:
+            uni_sample = unicode(self.body_sample,
+                self.link_parser.doc_enc or self.link_parser.http_enc, 'ignore')
+        except LookupError:
+            uni_sample = self.body_sample
         safe_sample = e(uni_sample)
         message = ""
         for tag, link_set in self.links.items():
@@ -578,11 +581,11 @@ class TablePresenter(object):
 
     def presentYesNo(self, value):
         if value is True:
-            return u'<td><img src="icon/accept1.png" alt="yes" title="yes"/></td>'
+            return u'<td><img src="static/icon/accept1.png" alt="yes" title="yes"/></td>'
         elif value is False:
-            return u'<td><img src="icon/remove-16.png" alt="no" title="no"/></td>'
+            return u'<td><img src="static/icon/remove-16.png" alt="no" title="no"/></td>'
         elif value is None:
-            return u'<td><img src="icon/help1.png" alt="?" title="unknown"/></td>'
+            return u'<td><img src="static/icon/help1.png" alt="?" title="unknown"/></td>'
         else:
             raise AssertionError, 'unknown value'
 
