@@ -27,6 +27,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import logging
+
 from urlparse import urlparse, urljoin
 
 from htmlentitydefs import entitydefs
@@ -93,11 +95,14 @@ class HTMLLinkParser(HTMLParser):
                 if chunk.__class__.__name__ != 'unicode':
                     try:
                         chunk = unicode(chunk, self.doc_enc or self.http_enc, 'ignore')
-                    except LookupError:
-                        pass
+                    except LookupError, e:
+                        logging.debug("%s: lookup error processing %s chunk: %s", self.base, content_type, e)
+
                 HTMLParser.feed(self, chunk)
-            except: # oh, well...
-                pass
+            except Exception, e: # oh, well...
+                logging.error("%s: Unable to handle %s chunk: %s. Content = %s", self.base, content_type, e, chunk)
+        else:
+            logging.debug("Skipping unparsable %s content", content_type)
 
     def handle_starttag(self, tag, attrs):
         attr_d = dict(attrs)
