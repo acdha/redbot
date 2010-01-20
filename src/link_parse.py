@@ -27,6 +27,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+from urlparse import urlparse, urljoin
+
 from htmlentitydefs import entitydefs
 from HTMLParser import HTMLParser
 
@@ -55,7 +57,10 @@ class HTMLLinkParser(HTMLParser):
 
     def __init__(self, base_uri, process_link):
         self.base = base_uri
-        self.process_link = process_link
+        self.parsed_base = urlparse(base_uri)
+
+        self.process_link_callback = process_link
+
         self.http_enc = 'latin-1'
         self.doc_enc = None
         self.links = {
@@ -69,9 +74,20 @@ class HTMLLinkParser(HTMLParser):
         self.count = 0
         HTMLParser.__init__(self)
 
+    def process_link(self, link, tag, title):
+        parsed_link = urlparse(link)
+
+        # Handle non-absolute URLs:
+        if not parsed_link.scheme:
+            link = urljoin(self.base, link)
+
+        self.process_link_callback(link, tag, title)
+
     def feed(self, response, chunk):
         "Feed a given chunk of HTML data to the parser"
-        if response.parsed_hdrs.get('content-type', [None])[0] in self.link_parseable_types:
+        content_type = response.parsed_hdrs.get('content-type', [None])[0]
+
+        if content_type in self.link_parseable_types:
             self.http_enc = response.parsed_hdrs['content-type'][1].get('charset', self.http_enc)
             try:
                 if chunk.__class__.__name__ != 'unicode':
